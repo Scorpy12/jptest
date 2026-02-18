@@ -6020,72 +6020,63 @@ async function checkQuizAnswers() {
   const divs = document.querySelectorAll('.quiz-question');
   if (divs.length === 0) return;
 
-  let correctCount = 0;
-  let mistakes = [];
+  showLoading(true);
 
-  // =========================
-  // 1. Multiple choice режимы
-  // =========================
-  if (mode === 'read-kanji' || mode === 'fill-gap') {
+  try {
+    // =========================
+    // 1. Multiple choice режимы
+    // =========================
+    if (mode === 'read-kanji' || mode === 'fill-gap') {
+      let correctCount = 0;
+      let mistakes = [];
 
-    divs.forEach((div, i) => {
-      const correct = div.dataset.correct;
-      const selected = div.querySelector('[data-selected="true"]');
+      divs.forEach((div, i) => {
+        const correct = div.dataset.correct;
+        const selected = div.querySelector('[data-selected="true"]');
 
-      if (!selected) {
-        mistakes.push({
-          number: i + 1,
-          question: div.querySelector('strong').innerText,
-          user: 'не выбран',
-          correct: correct
-        });
+        if (!selected) {
+          mistakes.push({
+            number: i + 1,
+            question: div.querySelector('strong').innerText,
+            user: 'не выбран',
+            correct
+          });
+          return;
+        }
+
+        if (selected.innerText.trim() === correct.trim()) {
+          correctCount++;
+        } else {
+          mistakes.push({
+            number: i + 1,
+            question: div.querySelector('strong').innerText,
+            user: selected.innerText.trim(),
+            correct
+          });
+        }
+      });
+
+      const grade = `${correctCount}/${divs.length}`;
+
+      if (mistakes.length === 0) {
+        document.getElementById('finalFeedback').innerText =
+          `Оценка: ${grade}\n\nВсе ответы верны! 🎉`;
         return;
       }
 
-      if (selected.innerText.trim() === correct.trim()) {
-        correctCount++;
-      } else {
-        mistakes.push({
-          number: i + 1,
-          question: div.querySelector('strong').innerText,
-          user: selected.innerText.trim(),
-          correct: correct
-        });
-      }
-    });
-
-    const grade = `${correctCount}/${divs.length}`;
-
-    if (mistakes.length === 0) {
-      document.getElementById('finalFeedback').innerText =
-        `Оценка: ${grade}\n\nВсе ответы верны! 🎉`;
-      return;
-    }
-
-    const explainPayload = mistakes.map(m =>
+      const explainPayload = mistakes.map(m =>
 `${m.number}. Вопрос: ${m.question}
 Ответ пользователя: ${m.user}
 Правильный ответ: ${m.correct}`
-    ).join("\n\n");
+      ).join("\n\n");
 
-    showLoading(true);
-
-    try {
       const res = await puter.ai.chat([
         {
           role: 'system',
           content: `
 Ты проверяешь тест JLPT.
-
-Правила ответа:
-1. Пиши ТОЛЬКО по переданным номерам.
-2. НЕ пиши вступлений.
-3. НЕ пиши выводов.
-4. НЕ добавляй общие причины ошибок.
-5. Формат строго:
-
+Пиши строго:
 Номер — краткое объяснение (1-2 предложения).
-
 Никакого другого текста.
 `
         },
@@ -6095,82 +6086,49 @@ async function checkQuizAnswers() {
         }
       ], { model: 'deepseek-chat', stream: false });
 
-      const explanation = res.message.content.trim();
-
       document.getElementById('finalFeedback').innerText =
-        `Оценка: ${grade}\n\nОшибки:\n\n${explanation}`;
-
-    } catch (e) {
-      console.error(e);
-      alert("Ошибка при проверке.");
-    } finally {
-      showLoading(false);
+        `Оценка: ${grade}\n\nОшибки:\n\n${res.message.content.trim()}`;
+      return;
     }
 
-    return;
-  }
-
-  // =========================
-  // 2. Режимы с вводом текста
-  // =========================
-  if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
-
-    divs.forEach((div, i) => {
-      const input = div.querySelector('input');
-      if (!input) return;
-
-      const userAnswer = input.value.trim();
-
-      mistakes.push({
-        number: i + 1,
-        question: div.querySelector('strong').innerText,
-        user: userAnswer || 'пусто'
-      });
-    });
-
-    showLoading(true);
-
-    try {
-      const payload = mistakes.map(m =>
-`${m.number}. Задание: ${m.question}
-Ответ ученика: ${m.user}`
-      ).join("\n\n");
+    // =========================
+    // 2. Режимы с вводом текста
+    // =========================
+    if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
+      const userAnswers = Array.from(divs).map((div, i) => {
+        const input = div.querySelector('input');
+        const userAnswer = input ? input.value.trim() : '';
+        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${userAnswer || 'пусто'}`;
+      }).join("\n\n");
 
       const res = await puter.ai.chat([
         {
           role: 'system',
           content: `
 Ты проверяешь переводы JLPT.
-
 Для каждого номера напиши строго:
 Номер — Верно
 или
 Номер — Неверно (кратко почему)
-
 Никакого другого текста.
 `
         },
-        {
-          role: 'user',
-          content: payload
-        }
+        { role: 'user', content: userAnswers }
       ], { model: 'deepseek-chat', stream: false });
 
-      const explanation = res.message.content.trim();
-
       document.getElementById('finalFeedback').innerText =
-        `Результат проверки:\n\n${explanation}`;
-
-    } catch (e) {
-      console.error(e);
-      alert("Ошибка при проверке.");
-    } finally {
-      showLoading(false);
+        `Результат проверки:\n\n${res.message.content.trim()}`;
+      return;
     }
 
-    return;
+  } catch (e) {
+    console.error(e);
+    alert("Ошибка при проверке.");
+  } finally {
+    showLoading(false);
   }
 }
+
 
 
 
