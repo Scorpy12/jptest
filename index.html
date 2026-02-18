@@ -6095,10 +6095,20 @@ async function checkQuizAnswers() {
     // 2. Режимы с вводом текста
     // =========================
     if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
-      const userAnswers = Array.from(divs).map((div, i) => {
+      const filledDivs = Array.from(divs).filter(div => {
         const input = div.querySelector('input');
-        const userAnswer = input ? input.value.trim() : '';
-        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${userAnswer || 'пусто'}`;
+        return input && input.value.trim() !== '';
+      });
+
+      if (filledDivs.length === 0) {
+        alert("Введите ответы перед проверкой.");
+        return;
+      }
+
+      const userAnswers = filledDivs.map((div, i) => {
+        const input = div.querySelector('input');
+        const userAnswer = input.value.trim();
+        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${userAnswer}`;
       }).join("\n\n");
 
       const res = await puter.ai.chat([
@@ -6123,12 +6133,11 @@ async function checkQuizAnswers() {
 
   } catch (e) {
     console.error(e);
-    alert("Ошибка при проверке.");
+    alert("Ошибка при проверке: " + e.message);
   } finally {
     showLoading(false);
   }
 }
-
 
 
 
