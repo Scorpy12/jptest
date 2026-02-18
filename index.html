@@ -5971,6 +5971,7 @@ function renderQuizInputs(text) {
 
   questionPairs.forEach(([q, opts, correct], i) => {
     const div = document.createElement('div');
+    div.className = 'quiz-question';
     div.style.marginBottom = '12px';
     div.dataset.correct = correct;
 
@@ -6015,7 +6016,7 @@ function renderQuizInputs(text) {
 
 
 async function checkQuizAnswers() {
-  const divs = document.querySelectorAll('#generatedQuizArea > div');
+  const divs = document.querySelectorAll('.quiz-question');
   if (divs.length === 0) return;
 
   let correctCount = 0;
