@@ -6071,19 +6071,12 @@ async function checkQuizAnswers() {
       ).join("\n\n");
 
       const res = await puter.ai.chat([
-        {
-          role: 'system',
-          content: `
+        { role: 'system', content: `
 Ты проверяешь тест JLPT.
-Пиши строго:
-Номер — краткое объяснение (1-2 предложения).
+Пиши строго: Номер — краткое объяснение (1-2 предложения) ошибки.
 Никакого другого текста.
-`
-        },
-        {
-          role: 'user',
-          content: explainPayload
-        }
+` },
+        { role: 'user', content: explainPayload }
       ], { model: 'deepseek-chat', stream: false });
 
       document.getElementById('finalFeedback').innerText =
@@ -6092,43 +6085,32 @@ async function checkQuizAnswers() {
     }
 
     // =========================
-    // 2. Режимы с вводом текста
+    // 2. Текстовые режимы
     // =========================
     if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
-      const filledDivs = Array.from(divs).filter(div => {
-        const input = div.querySelector('input');
-        return input && input.value.trim() !== '';
-      });
 
-      if (filledDivs.length === 0) {
-        alert("Введите ответы перед проверкой.");
-        return;
-      }
-
-      const userAnswers = filledDivs.map((div, i) => {
+      const userAnswers = Array.from(divs).map((div, i) => {
         const input = div.querySelector('input');
-        const userAnswer = input.value.trim();
-        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${userAnswer}`;
+        const answer = input?.value.trim() || ''; // пустые ответы тоже
+        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${answer}`;
       }).join("\n\n");
 
       const res = await puter.ai.chat([
-        {
-          role: 'system',
-          content: `
-Ты проверяешь переводы JLPT.
-Вначале напиши N/10, где N это количество ответов Верно
-Для каждого номера напиши строго:
-Номер — Верно
-или
-Номер — Неверно (показываешь верное предложение и обьясняешь что было упущено в моем варинте ответа)
-Никакого другого текста.
-`
-        },
+        { role: 'system', content: `
+Ты проверяешь переводы JLPT. 
+Определи сама, верен ли ответ.  
+Если верно — напиши "Номер — Верно".  
+Если неверно — напиши "Номер — Неверно", покажи правильный вариант и объясни, какие ошибки были в структуре предложения или упущенные элементы.  
+Пустые ответы тоже считаются неверными.  
+Сначала в первой строке укажи N/10, где N — количество верных ответов.  
+Никакого другого текста. 
+` },
         { role: 'user', content: userAnswers }
       ], { model: 'deepseek-chat', stream: false });
 
       document.getElementById('finalFeedback').innerText =
-        `Результат проверки:\n\n${res.message.content.trim()}`;
+        res.message.content.trim();
+
       return;
     }
 
