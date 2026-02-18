@@ -6084,19 +6084,27 @@ async function checkQuizAnswers() {
       return;
     }
 
-    // =========================
-    // 2. Текстовые режимы
-    // =========================
-    if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
+// =========================
+// 2. Текстовые режимы
+// =========================
+if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
 
-      const userAnswers = Array.from(divs).map((div, i) => {
-        const input = div.querySelector('input');
-        const answer = input?.value.trim() || ''; // пустые ответы тоже
-        return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${answer}`;
-      }).join("\n\n");
+  const divsArray = Array.from(divs);
+  if (divsArray.length === 0) {
+    alert("Сначала сгенерируйте тест.");
+    return;
+  }
 
-      const res = await puter.ai.chat([
-        { role: 'system', content: `
+  const userAnswers = divsArray.map((div, i) => {
+    const input = div.querySelector('input');
+    const answer = input?.value.trim() || ''; // пустые ответы тоже считаются неверными
+    return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${answer}`;
+  }).join("\n\n");
+
+  document.getElementById('finalFeedback').innerText = 'Проверка...';
+
+  const res = await puter.ai.chat([
+    { role: 'system', content: `
 Ты проверяешь переводы JLPT. 
 Определи сама, верен ли ответ.  
 Если верно — напиши "Номер — Верно".  
@@ -6105,14 +6113,14 @@ async function checkQuizAnswers() {
 Сначала в первой строке укажи N/10, где N — количество верных ответов.  
 Никакого другого текста. 
 ` },
-        { role: 'user', content: userAnswers }
-      ], { model: 'deepseek-chat', stream: false });
+    { role: 'user', content: userAnswers }
+  ], { model: 'deepseek-chat', stream: false });
 
-      document.getElementById('finalFeedback').innerText =
-        res.message.content.trim();
+  document.getElementById('finalFeedback').innerText =
+    res.message.content.trim();
 
-      return;
-    }
+  return;
+}
 
   } catch (e) {
     console.error(e);
