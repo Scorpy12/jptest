@@ -6095,11 +6095,13 @@ if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
     return;
   }
 
-  const userAnswers = divsArray.map((div, i) => {
-    const input = div.querySelector('input');
-    const answer = input?.value.trim() || ''; // пустые ответы тоже считаются неверными
-    return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nОтвет ученика: ${answer}`;
-  }).join("\n\n");
+const userAnswers = divsArray.map((div, i) => {
+  const input = div.querySelector('input');
+  const answer = input?.value.trim() || ''; // пустые ответы тоже считаются неверными
+  const correct = div.dataset.correct || ''; // получаем правильный ответ
+  return `${i + 1}. Задание: ${div.querySelector('strong').innerText}\nПравильный ответ: ${correct}\nОтвет ученика: ${answer}`;
+}).join("\n\n");
+
 
   document.getElementById('finalFeedback').innerText = 'Проверка...';
 
@@ -6110,7 +6112,6 @@ if (mode === 'jp-to-ru' || mode === 'ru-to-jp') {
 Если верно — напиши "Номер — Верно".  
 Если неверно — напиши "Номер — Неверно", покажи правильный вариант и объясни, какие ошибки были в структуре предложения или упущенные элементы.  
 Пустые ответы тоже считаются неверными.  
-Сначала в первой строке укажи N/10, где N — количество верных ответов.  
 Никакого другого текста. 
 ` },
     { role: 'user', content: userAnswers }
